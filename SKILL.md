@@ -1,6 +1,6 @@
 ---
 name: qq-screenshot
-description: Capture a fresh Windows desktop screenshot for QQ replies. Use when the user asks for 截图、截屏、桌面图、当前屏幕、最新桌面. Prefer the Windows Win+PrtScn system screenshot path, save into a dedicated QQ output folder, and return MEDIA:<path> for direct reply delivery.
+description: Capture a fresh Windows desktop screenshot for QQ replies. Use when the user asks for 截图、截屏、桌面图、当前屏幕、最新桌面. Prefer a Windows GDI live capture by default for truly fresh screenshots, support selecting primary or secondary display, automatically prune old screenshot files, keep PIL/ImageGrab and Win+PrtScn system screenshot paths as fallback/manual options, save into a dedicated QQ output folder, and return MEDIA:<path> for direct reply delivery.
 ---
 
 # qq-screenshot
@@ -8,53 +8,46 @@ description: Capture a fresh Windows desktop screenshot for QQ replies. Use when
 Use this skill when the user wants a **fresh Windows desktop screenshot sent back in QQ**.
 
 ## What this skill does
-- Capture the current primary screen
-- Prefer the **Windows Win + PrtScn** system screenshot path by default
+- Capture the current desktop screen
+- Prefer a **Windows GDI live capture** by default
+- Support selecting **primary / secondary / all screens**
+- Automatically prune older screenshot files from the QQ output folder
+- Keep **PIL / ImageGrab** and **Windows Win + PrtScn** as backup/manual options
 - Save each screenshot into a dedicated QQ folder with a new filename
 - Return `MEDIA:<path>` for direct OpenClaw media reply
-
-## Best use cases
-Use this skill for requests like:
-- 截一张桌面图
-- 截个屏给我
-- 发我当前桌面
-- 截图发我
-- 再截一张新的
-- 用 Win+PrtScn 截图
-
-## Script
-- `{baseDir}/scripts/capture-qq.ps1`
 
 ## Default behavior
 - Output folder: `C:\Users\besam\.openclaw\workspace\qq-screenshots`
 - Capture target: primary screen
-- Default method: `system` (Win + PrtScn)
+- Default method: `system` (latest verified realtime path on this machine)
 - Output filename: `qq-screenshot_YYYYMMDD_HHMMSS_fff.png`
 - Return format: `MEDIA:<absolute-path>`
+- Auto-prune: keep the newest 50 screenshot files by default
+- Optional grid mode: `-Grid`
+- Default remembered grid preset for 方块截图: `quarter`（四分之一小）
 
-## Recommended command
+## Grid screenshot mode
+Use `-Grid` to generate a QQ-sendable screenshot with labeled square-like grid cells.
+
+### Default remembered preset
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method system -Grid -GridPreset quarter
 ```
 
+### Other grid presets
+- `original`
+- `two-thirds`
+- `one-fifth`
+- `double`
+- `four-fifths`
+
 ## Useful options
-### Force PIL live capture instead of Win + PrtScn
+### Force PIL capture
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method pil
 ```
 
-### Save to a custom folder
+### Force Win + PrtScn system screenshot
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -OutputDir "C:\path\to\folder"
+powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method system
 ```
-
-### Return plain path instead of MEDIA
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -NoMedia
-```
-
-## Notes
-- Windows only
-- Designed for QQ screenshot replies
-- Default to **Win + PrtScn** because the user explicitly prefers that path
-- Use `-Method pil` only when the system screenshot path is unsuitable on the current machine
