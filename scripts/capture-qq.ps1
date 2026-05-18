@@ -1,5 +1,5 @@
 param(
-    [string]$OutputDir = "C:\Users\besam\.openclaw\workspace\qq-screenshots",
+    [string]$OutputDir = (Join-Path (Get-Location) "qq-screenshots"),
     [switch]$NoMedia,
     [ValidateSet('system','pil','gdi')]
     [string]$Method = 'system',
@@ -8,16 +8,23 @@ param(
     [int]$KeepCount = 50,
     [switch]$Grid,
     [ValidateSet('quarter','six')]
-    [string]$GridPreset = 'quarter'
+    [string]$GridPreset = 'quarter',
+    [string]$SystemCaptureScript = ""
 )
 
 $ErrorActionPreference = 'Stop'
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent $scriptDir
+if (-not $SystemCaptureScript) {
+    $bundledCandidate = Join-Path $repoRoot "scripts\capture-screen.ps1"
+    if (Test-Path $bundledCandidate) {
+        $SystemCaptureScript = $bundledCandidate
+    }
+}
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
 $outputPath = Join-Path $OutputDir "qq-screenshot_$timestamp.png"
-
-$telegramCaptureScript = "C:\Users\besam\.openclaw\workspace\skills\telegram-image-sender\scripts\capture-screen.ps1"
 $pythonScript = @"
 from PIL import ImageGrab
 import sys
@@ -116,10 +123,18 @@ function Invoke-SystemCapture {
         }
     }
 
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $telegramCaptureScript -UseSystemScreenshot -OutputPath $outputPath | Out-Null
+    $usedSystemScript = $false
+    if ($SystemCaptureScript -and (Test-Path $SystemCaptureScript)) {
+        try {
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $SystemCaptureScript -UseSystemScreenshot -OutputPath $outputPath | Out-Null
+            $usedSystemScript = $true
+        } catch {
+            $usedSystemScript = $false
+        }
+    }
 
     $copiedOk = $false
-    if (Test-Path $outputPath) {
+    if ($usedSystemScript -and (Test-Path $outputPath)) {
         try {
             $copiedItem = Get-Item $outputPath
             if ($copiedItem.Length -gt 0) {
@@ -156,7 +171,7 @@ if (-not (Test-Path $outputPath)) {
 }
 
 if ($Grid) {
-    $gridScript = "C:\Users\besam\.openclaw\workspace\skills\qq-screenshot\scripts\make-grid.py"
+    $gridScript = Join-Path $scriptDir "make-grid.py"
     $gridPath = Join-Path $OutputDir ("qq-grid_" + $timestamp + ".png")
     python $gridScript --input $outputPath --output $gridPath --preset $GridPreset | Out-Null
     if (-not (Test-Path $gridPath)) {

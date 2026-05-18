@@ -1,25 +1,30 @@
 # qq-screenshot-skill
 
-A Windows/OpenClaw skill for capturing **fresh desktop screenshots for QQ replies**, with optional **standard grid overlay** for click guidance.
+A reusable Windows/OpenClaw skill for capturing **fresh desktop screenshots for QQ replies**, with optional **labeled grid overlays** for click guidance.
 
-This repository is the GitHub-published version of the `qq-screenshot` skill currently used in OpenClaw.
+This repository has been cleaned up into a **public reusable version**:
+
+- fewer machine-specific assumptions
+- bundled grid overlay script
+- configurable system screenshot helper
+- GDI fallback when a system screenshot helper is unavailable
 
 ---
 
-## What it does
+## Features
 
 - Capture the current Windows desktop
-- Return a QQ-sendable `MEDIA:<path>` result for OpenClaw
-- Support multiple capture methods:
-  - `system` - preferred default on this machine
+- Return OpenClaw-friendly `MEDIA:<path>` output
+- Support multiple capture modes:
+  - `system`
   - `pil`
   - `gdi`
-- Support selecting display target:
+- Support screen target selection:
   - `primary`
   - `secondary`
   - `all`
-- Support **standard grid screenshot** mode for click guidance
-- Automatically prune old screenshot files
+- Support **standard labeled grid screenshots**
+- Automatically prune old screenshots
 
 ---
 
@@ -28,86 +33,44 @@ This repository is the GitHub-published version of the `qq-screenshot` skill cur
 ```text
 qq-screenshot-skill/
 ├─ SKILL.md
+├─ README.md
 └─ scripts/
    ├─ capture-qq.ps1
    └─ make-grid.py
 ```
 
-- `SKILL.md` - skill metadata and OpenClaw-facing instructions
-- `scripts/capture-qq.ps1` - main screenshot entry script
-- `scripts/make-grid.py` - standard grid overlay generator
+---
+
+## Requirements
+
+- Windows
+- PowerShell
+- Python 3
+- Pillow
+
+Install Pillow:
+
+```powershell
+pip install pillow
+```
 
 ---
 
-## Default behavior
+## Quick start
 
-Current defaults:
-
-- Output directory:
-  `C:\Users\besam\.openclaw\workspace\qq-screenshots`
-- Default capture method:
-  `system`
-- Default display target:
-  `primary`
-- Standard grid preset:
-  `quarter`
-- Auto-prune:
-  keep newest 50 screenshots by default
-
-Output filenames:
-
-- Normal screenshot:
-  `qq-screenshot_YYYYMMDD_HHMMSS_fff.png`
-- Grid screenshot:
-  `qq-grid_YYYYMMDD_HHMMSS_fff.png`
-
----
-
-## Usage
-
-### 1. Normal screenshot
+### Normal screenshot
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1
 ```
 
-### 2. Force system screenshot path
+### Grid screenshot
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method system
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Grid -GridPreset quarter
 ```
 
-### 3. Force PIL capture
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method pil
-```
-
-### 4. Force GDI capture
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method gdi
-```
-
-### 5. Capture secondary screen
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Screen secondary
-```
-
-### 6. Capture all screens
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Screen all
-```
-
-### 7. Standard grid screenshot
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method system -Grid -GridPreset quarter
-```
-
-### 8. Return raw file path instead of MEDIA output
+### Return raw path instead of `MEDIA:<path>`
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -NoMedia
@@ -121,109 +84,135 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -No
 
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
-| `-OutputDir` | string | `C:\Users\besam\.openclaw\workspace\qq-screenshots` | Output folder |
-| `-NoMedia` | switch | off | Output raw path instead of `MEDIA:<path>` |
+| `-OutputDir` | string | `./qq-screenshots` | Output folder |
+| `-NoMedia` | switch | off | Return raw path instead of `MEDIA:<path>` |
 | `-Method` | enum | `system` | Capture method: `system`, `pil`, `gdi` |
 | `-Screen` | enum | `primary` | Target screen: `primary`, `secondary`, `all` |
-| `-KeepCount` | int | `50` | Max number of screenshot files to keep |
+| `-KeepCount` | int | `50` | Max number of screenshots to keep |
 | `-Grid` | switch | off | Generate labeled grid screenshot |
 | `-GridPreset` | enum | `quarter` | Grid preset: `quarter`, `six` |
+| `-SystemCaptureScript` | string | empty | Optional path to a helper PowerShell script that supports `-UseSystemScreenshot -OutputPath ...` |
 
 ---
 
-## Standard grid screenshot spec
+## Capture modes
 
-This repository now follows a **standardized grid screenshot format** intended for QQ click guidance.
+### 1) `system`
+Preferred default if you already have a helper script that can trigger a fresh system screenshot.
 
-### Current standard
-
-- Preset: `quarter`
-- Small square-like cells
-- Row-major labeling
-- Labels look like:
-  - first row: `A1 A2 A3 ...`
-  - second row: `B1 B2 B3 ...`
-- Approximate baseline cell size:
-  around `40px`
-- Visual style:
-  red grid lines + white label box + red text
-
-### Use case
-
-This is intended for:
-
-- button positioning
-- remote click guidance
-- desktop coordination
-- screenshot-based operator instructions
-
----
-
-## Dependencies
-
-### PowerShell side
-
-- Windows PowerShell / PowerShell with permission to run local script
-
-### Python side
-
-`make-grid.py` requires Pillow:
+You can pass one explicitly:
 
 ```powershell
-pip install pillow
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method system -SystemCaptureScript C:\path\to\capture-screen.ps1
 ```
 
-The PIL capture route also depends on Pillow.
+If the helper script is missing or fails to produce a valid fresh screenshot, the skill falls back to `gdi` capture.
 
----
+### 2) `pil`
+Uses Python Pillow `ImageGrab`.
 
-## How the capture methods work
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method pil
+```
 
-### `system`
-Preferred default on this machine.
-
-This route delegates to a companion script from another local skill:
-
-- `skills/telegram-image-sender/scripts/capture-screen.ps1`
-
-If the system screenshot route does not produce a valid fresh image, the script falls back to `gdi` capture.
-
-### `pil`
-Uses Python `PIL.ImageGrab`.
-
-### `gdi`
+### 3) `gdi`
 Uses Windows GDI / `CopyFromScreen`.
 
----
-
-## Notes
-
-- This repository is designed around a Windows + OpenClaw environment.
-- Some paths are machine-specific and may need adjustment before reuse on another machine.
-- The current implementation expects the OpenClaw workspace layout used by the author.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method gdi
+```
 
 ---
 
-## Recommended OpenClaw usage
+## Screen targeting
 
-User intent mapping:
+### Primary screen
 
-- User says `截图` -> return normal screenshot
-- User says `网格截图` -> return standard grid screenshot
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Screen primary
+```
+
+### Secondary screen
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Screen secondary
+```
+
+### All screens
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Screen all
+```
 
 ---
 
-## Version direction
+## Grid screenshot mode
 
-Compared with earlier public versions, this version includes:
+Use grid screenshots when you need click guidance or coordinate-style desktop navigation.
 
-- standardized grid screenshot behavior
-- dedicated `make-grid.py` script
-- cleaner long-term format for QQ click guidance
-- pruning logic that covers both normal and grid screenshots
+### Standard preset
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Grid -GridPreset quarter
+```
+
+### Larger preset
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Grid -GridPreset six
+```
+
+### Current grid style
+
+- row-major labels
+- first row: `A1 A2 A3 ...`
+- second row: `B1 B2 B3 ...`
+- red grid lines
+- white label boxes
+- red label text
 
 ---
 
-## License
+## Output behavior
 
-Add a license if you want to make redistribution terms explicit.
+Normal screenshot filename pattern:
+
+```text
+qq-screenshot_YYYYMMDD_HHMMSS_fff.png
+```
+
+Grid screenshot filename pattern:
+
+```text
+qq-grid_YYYYMMDD_HHMMSS_fff.png
+```
+
+By default the script keeps the newest 50 screenshot files and prunes older ones.
+
+---
+
+## OpenClaw integration notes
+
+This repository is suitable for OpenClaw skill usage because it returns:
+
+```text
+MEDIA:<absolute-path>
+```
+
+Suggested user intent mapping:
+
+- `截图` -> normal screenshot
+- `网格截图` -> labeled grid screenshot
+
+---
+
+## Portability notes
+
+This public version is more reusable than the earlier machine-bound version:
+
+- local bundled `make-grid.py`
+- no hardcoded OpenClaw workspace path for the grid script
+- optional system screenshot helper path
+- default output directory relative to current working directory
+
+If you want to integrate it into another environment, the only thing you may need to swap is your preferred system screenshot helper.
