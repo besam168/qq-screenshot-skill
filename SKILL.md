@@ -13,6 +13,7 @@ Use this skill when the user wants a **fresh Windows desktop screenshot sent bac
 - Support selecting **primary / secondary / all screens**
 - Automatically prune older screenshot files from the QQ output folder
 - Keep **PIL / ImageGrab** and **Windows Win + PrtScn** as backup/manual options
+- Support a **standard grid screenshot** mode for click guidance
 - Save each screenshot into a dedicated QQ folder with a new filename
 - Return `MEDIA:<path>` for direct OpenClaw media reply
 
@@ -21,25 +22,10 @@ Use this skill when the user wants a **fresh Windows desktop screenshot sent bac
 - Capture target: primary screen
 - Default method: `system` (latest verified realtime path on this machine)
 - Output filename: `qq-screenshot_YYYYMMDD_HHMMSS_fff.png`
+- Grid screenshot filename: `qq-grid_YYYYMMDD_HHMMSS_fff.png`
 - Return format: `MEDIA:<absolute-path>`
 - Auto-prune: keep the newest 50 screenshot files by default
-- Optional grid mode: `-Grid`
-- Default remembered grid preset for 方块截图: `quarter`（四分之一小）
-
-## Grid screenshot mode
-Use `-Grid` to generate a QQ-sendable screenshot with labeled square-like grid cells.
-
-### Default remembered preset
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method system -Grid -GridPreset quarter
-```
-
-### Other grid presets
-- `original`
-- `two-thirds`
-- `one-fifth`
-- `double`
-- `four-fifths`
+- Standard grid preset: `quarter`
 
 ## Useful options
 ### Force PIL capture
@@ -51,3 +37,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method system
 ```
+
+### Standard grid screenshot
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File {baseDir}/scripts/capture-qq.ps1 -Method system -Grid -GridPreset quarter
+```
+
+## Long-term standard
+- 用户说：`截图` → 返回普通截图
+- 用户说：`网格截图` → 返回**标准网格截图**
+- 当前标准网格截图固定为：
+  - `quarter` 预设
+  - **正方小格**
+  - **每个格子单独编号**
+  - **按行编号**：第一行 `A1 A2 A3 ...`，第二行 `B1 B2 B3 ...`，后面依次往下推
+  - 当前实现基线：约 `40px` 一格、红线、白底红字小标签
+- 这是 QQ 点击辅助场景的默认长期规格，后续不要再临时改回别的编号方式
+
