@@ -2,12 +2,13 @@
 
 A reusable Windows/OpenClaw skill for capturing **fresh desktop screenshots for QQ replies**, with optional **labeled grid overlays** for click guidance.
 
-This repository has been cleaned up into a **public reusable version**:
+This repository is now packaged as a **more complete open-source version**:
 
-- fewer machine-specific assumptions
-- bundled grid overlay script
-- configurable system screenshot helper
-- GDI fallback when a system screenshot helper is unavailable
+- less machine-specific
+- includes a bundled grid overlay generator
+- includes a bundled default system capture helper
+- supports fallback behavior
+- usable both inside and outside OpenClaw
 
 ---
 
@@ -32,10 +33,12 @@ This repository has been cleaned up into a **public reusable version**:
 
 ```text
 qq-screenshot-skill/
+├─ LICENSE
 ├─ SKILL.md
 ├─ README.md
 └─ scripts/
    ├─ capture-qq.ps1
+   ├─ capture-screen.ps1
    └─ make-grid.py
 ```
 
@@ -58,19 +61,26 @@ pip install pillow
 
 ## Quick start
 
-### Normal screenshot
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/besam168/qq-screenshot-skill.git
+cd qq-screenshot-skill
+```
+
+### 2. Normal screenshot
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1
 ```
 
-### Grid screenshot
+### 3. Grid screenshot
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Grid -GridPreset quarter
 ```
 
-### Return raw path instead of `MEDIA:<path>`
+### 4. Return raw path instead of `MEDIA:<path>`
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -NoMedia
@@ -98,15 +108,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -No
 ## Capture modes
 
 ### 1) `system`
-Preferred default if you already have a helper script that can trigger a fresh system screenshot.
+This repository now bundles a default helper:
 
-You can pass one explicitly:
+- `scripts/capture-screen.ps1`
+
+So the default `system` mode can run without depending on another private skill directory.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method system
+```
+
+You can still override it with your own helper:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method system -SystemCaptureScript C:\path\to\capture-screen.ps1
 ```
 
-If the helper script is missing or fails to produce a valid fresh screenshot, the skill falls back to `gdi` capture.
+If the helper script is missing or fails, the skill falls back to `gdi` capture.
 
 ### 2) `pil`
 Uses Python Pillow `ImageGrab`.
@@ -191,7 +209,7 @@ By default the script keeps the newest 50 screenshot files and prunes older ones
 
 ---
 
-## OpenClaw integration notes
+## OpenClaw usage
 
 This repository is suitable for OpenClaw skill usage because it returns:
 
@@ -204,15 +222,42 @@ Suggested user intent mapping:
 - `截图` -> normal screenshot
 - `网格截图` -> labeled grid screenshot
 
+To use it as an OpenClaw skill, keep:
+- `SKILL.md`
+- `scripts/capture-qq.ps1`
+- `scripts/capture-screen.ps1`
+- `scripts/make-grid.py`
+
+---
+
+## Standalone usage
+
+You can also use this outside OpenClaw as a plain Windows screenshot utility.
+
+Examples:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -NoMedia
+```
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-qq.ps1 -Method gdi -Screen secondary -NoMedia
+```
+
 ---
 
 ## Portability notes
 
-This public version is more reusable than the earlier machine-bound version:
+This public version is more reusable than the earlier machine-bound version because it now includes:
 
 - local bundled `make-grid.py`
+- local bundled `capture-screen.ps1`
 - no hardcoded OpenClaw workspace path for the grid script
-- optional system screenshot helper path
+- optional override for a custom system capture helper
 - default output directory relative to current working directory
 
-If you want to integrate it into another environment, the only thing you may need to swap is your preferred system screenshot helper.
+---
+
+## License
+
+This project is released under the MIT License. See `LICENSE`.
